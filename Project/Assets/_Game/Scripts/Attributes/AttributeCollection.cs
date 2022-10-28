@@ -4,20 +4,27 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public class AttributeCollection :IList<AttributeBase>, IList
+public class AttributeCollection
 {
-    [SerializeField, HideInInspector]
-    public List<Object> unityObjects;
+    [SerializeField] public List<Object> unityObjects = new List<Object>(); 
 
-    [SerializeField]
-    private byte[] serializationData;
+    [SerializeField] private byte[] serializationData;
 
     [Tooltip("An array struct created in initialize that stores the attributes in the collection.")]
-    public List<AttributeBase> attributes;
+    private List<AttributeBase> attributes;
+
+    /// <summary>
+    /// [WARNING] This is only used to pass into the AttributeCollectionDrawer's ReorderableList. All other list operations should go through 
+    /// AttributeCollection so ensure proper de/serialization
+    /// </summary>
+    public List<AttributeBase> Attributes => attributes;
+
+    public AttributeCollection()
+    {
+        Deserialize();
+    }
 
     #region IList<T> Implementation
-
-    public bool IsReadOnly => true;
 
     public AttributeBase this[int index]
     {
@@ -28,9 +35,9 @@ public class AttributeCollection :IList<AttributeBase>, IList
         set
         {
             attributes[index] = value;
-            if (value.IsObject())
+            if (value.IsUnityObject())
             {
-                unityObjects.Add(((Attribute<Object>)value).Value);
+                unityObjects.Add(value.GetUnityObject());
             }
             Serialize();
         }
@@ -45,7 +52,7 @@ public class AttributeCollection :IList<AttributeBase>, IList
 
     public void Insert(int index, AttributeBase item)
     {
-        if (item.IsObject())
+        if (item.IsUnityObject())
         {
             unityObjects.Add(((Attribute<Object>)item).Value);
         }
@@ -57,19 +64,19 @@ public class AttributeCollection :IList<AttributeBase>, IList
         var attribute = attributes[index];
 
         attributes.RemoveAt(index);
-        if (attribute.IsObject())
+        if (attribute.IsUnityObject())
         {
-            unityObjects.Remove(((Attribute<Object>)attribute).Value);
+            unityObjects.Remove(attribute.GetUnityObject());
         }
         Serialize();
     }
 
-    public void Add(AttributeBase item)
+    public void Add(AttributeBase attribute)
     {
-        attributes.Add(item);
-        if (item.IsObject())
+        attributes.Add(attribute);
+        if (attribute.IsUnityObject())
         {
-            unityObjects.Add(((Attribute<Object>)item).Value);
+            unityObjects.Add(attribute.GetUnityObject());
         }
         Serialize();
     }
@@ -78,7 +85,7 @@ public class AttributeCollection :IList<AttributeBase>, IList
     {
         foreach (var attribute in attributes)
         {
-            if (attribute.IsObject())
+            if (attribute.IsUnityObject())
             {
                 unityObjects.Remove(((Attribute<Object>)attribute).Value);
             }
@@ -93,16 +100,11 @@ public class AttributeCollection :IList<AttributeBase>, IList
         return attributes.Contains(item);
     }
 
-    public void CopyTo(AttributeBase[] array, int arrayIndex)
-    {
-        attributes.CopyTo(array, arrayIndex);
-    }
-
     public bool Remove(AttributeBase item)
     {
         var attribute = attributes.Find(ex => ex == item);
 
-        if (attribute.IsObject())
+        if (attribute.IsUnityObject())
         {
             unityObjects.Remove(((Attribute<Object>)attribute).Value);
         }
@@ -122,64 +124,11 @@ public class AttributeCollection :IList<AttributeBase>, IList
         for (int i = 0; i < attributes.Count; i++) { yield return attributes[i]; }
     }
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
+    //IEnumerator IEnumerable.GetEnumerator()
+    //{
+    //    return GetEnumerator();
+    //}
 
-    #endregion
-
-    #region IList implementation
-
-    public bool IsFixedSize => false;
-
-    public bool IsSynchronized => false;
-
-    public object SyncRoot => null;
-
-    object IList.this[int index]
-    {
-        get
-        {
-            return attributes?[index];
-        }
-        set
-        {
-            attributes[index] = (AttributeBase)value;
-            Serialize();
-        }
-    }
-
-    public int Add(object value)
-    {
-        Add((AttributeBase)value);
-        return attributes.Count;
-    }
-
-    public bool Contains(object value)
-    {
-        return Contains((AttributeBase)value);
-    }
-
-    public int IndexOf(object value)
-    {
-        return IndexOf((AttributeBase)value);
-    }
-
-    public void Insert(int index, object value)
-    {
-        Insert(index, (AttributeBase)value);
-    }
-
-    public void Remove(object value)
-    {
-        Remove((AttributeBase)value);
-    }
-
-    public void CopyTo(System.Array array, int index)
-    {
-        CopyTo(array, index);
-    }
     #endregion
 
     /// <summary>
@@ -196,32 +145,35 @@ public class AttributeCollection :IList<AttributeBase>, IList
 
     public void Serialize()
     {
-        Debug.Log("Serializing");
+        //Debug.Log("Serializing");
 
         // Unity should be allowed to handle serialization and deserialization of its own weird objects.
         // So if your data-graph contains UnityEngine.Object types, you will need to provide Odin with
         // a list of UnityEngine.Object which it will then use as an external reference resolver.
         //List<UnityEngine.Object> unityObjectReferences = new List<UnityEngine.Object>();
+
+        List<Object> objects = new List<Object>(unityObjects);
+
         foreach (var obj in attributes)
         {
-            if (obj.IsObject())
+            if (obj.IsUnityObject())
             {
-                unityObjects.Add(((Attribute<UnityEngine.Object>)obj).Value);
+                var unityObject = obj.GetUnityObject();
+                objects.Add(unityObject);
             }
         }
 
+        unityObjects = objects;
+
 
         DataFormat dataFormat = DataFormat.Binary;
-        //DataFormat dataFormat = DataFormat.JSON;
 
         serializationData = SerializationUtility.SerializeValue(attributes, dataFormat, out unityObjects);
     }
 
     public List<AttributeBase> Deserialize()
     {
-        //List<UnityEngine.Object> unityObjectReferences = new List<UnityEngine.Object>();
         DataFormat dataFormat = DataFormat.Binary;
-        //DataFormat dataFormat = DataFormat.JSON;
 
         attributes = SerializationUtility.DeserializeValue<List<AttributeBase>>(serializationData, dataFormat, unityObjects);
         if (attributes == null)
@@ -354,7 +306,7 @@ public class AttributeCollection :IList<AttributeBase>, IList
 
         for (int i = 0; i < attributes.Count; i++)
         {
-            if (attributes[i].Name != attributeName) { continue; }
+            if (attributes[i].FieldName != attributeName) { continue; }
 
             attribute = attributes[i];
             return true;

@@ -25,36 +25,7 @@ public class Attribute<T> : AttributeBase
         : base(name)
     {
         this.Value = Value;
-        //base.Value = Value;
     }
-
-    //public override void Serialize()
-    //{
-    //    // Unity should be allowed to handle serialization and deserialization of its own weird objects.
-    //    // So if your data-graph contains UnityEngine.Object types, you will need to provide Odin with
-    //    // a list of UnityEngine.Object which it will then use as an external reference resolver.
-    //    List<UnityEngine.Object> unityObjectReferences = new List<UnityEngine.Object>();
-
-    //    //DataFormat dataFormat = DataFormat.Binary;
-    //    DataFormat dataFormat = DataFormat.JSON;
-
-    //    serializationData = SerializationUtility.SerializeValue(Value, dataFormat, out unityObjectReferences);
-    //}
-
-    //public override object Deserialize()
-    //{
-    //    List<UnityEngine.Object> unityObjectReferences = new List<UnityEngine.Object>();
-    //    //DataFormat dataFormat = DataFormat.Binary;
-    //    DataFormat dataFormat = DataFormat.JSON;
-
-    //    Value = SerializationUtility.DeserializeValue<T>(serializationData, dataFormat, unityObjectReferences);
-    //    return Value;
-    //}
-
-    //public T DeserializeValue()
-    //{
-    //    return (T)Deserialize();
-    //}
 
     /// <summary>
     /// Static function to get the attribute value Type.
@@ -63,6 +34,25 @@ public class Attribute<T> : AttributeBase
     public static System.Type GetAttributeValueType()
     {
         return typeof(T);
+    }
+
+    public override Object GetUnityObject()
+    {
+        if (IsUnityObject())
+        {
+            //HACK no way to do this cleanly without a type constraint which we can't do because this can be templatized to non UnityEngine Objects
+            UnityEngine.Object obj = (UnityEngine.Object)(System.Object)Value;
+            return obj;
+        }
+        return null;
+    }
+
+    public override void SetUnityObject(Object unityObject)
+    {
+        if (IsUnityObject())
+        {
+            Value = (T)(System.Object)unityObject;
+        }
     }
 
     public override System.Type GetValueType()

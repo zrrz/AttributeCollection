@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -5,13 +6,13 @@ using System.Reflection;
 using UnityEngine;
 
 [System.Serializable]
-public abstract class AttributeBase //: ISerializationCallbackReceiver
+public abstract class AttributeBase
 {
     [SerializeField, HideInInspector] protected byte[] serializationData;
 
     public System.Type Type;
-    public string Name;
-    //public object Value;
+    public string FieldName;
+    public string TypeName;
 
     /// <summary>
     /// Returns the type of the value of the attribute.
@@ -19,7 +20,7 @@ public abstract class AttributeBase //: ISerializationCallbackReceiver
     /// <returns>The value Type.</returns>
     public abstract System.Type GetValueType();
 
-    public static AttributeBase CreateInstance(System.Type type, string name, string modifyExpression = "")
+    public static AttributeBase CreateInstance(System.Type type, string name, System.Type attributeType, string typeName)
     {
         //Use reflection to create the instance.
         //Parameters example: string name, int OverrideValue = 0, VariantType variantType = VariantType.Override, string modifyExpression = "" .
@@ -28,13 +29,6 @@ public abstract class AttributeBase //: ISerializationCallbackReceiver
         {
             Debug.LogError("Must be a subclass of AttributeBase! Did you maybe use a T instead of an Attribute<T>?");
             return null;
-        }
-
-        var getTypeMethodInfo = type.GetMethod("GetAttributeValueType");
-        System.Type valueType = null;
-        if (getTypeMethodInfo != null)
-        {
-            valueType = (System.Type)getTypeMethodInfo.Invoke(null, null); // (null, null) means calling static method with no parameters
         }
 
         //if (value == null || valueType != value.GetType())
@@ -47,8 +41,13 @@ public abstract class AttributeBase //: ISerializationCallbackReceiver
             new object[] { name/*, value, modifyExpression */},
             CultureInfo.CurrentCulture) as AttributeBase;
 
+        newAttribute.Type = attributeType;
+        newAttribute.TypeName = typeName;
         return newAttribute;
     }
+
+    public abstract UnityEngine.Object GetUnityObject();
+    public abstract void SetUnityObject(UnityEngine.Object unityObject);
 
     /// <summary>
     /// Default Constructor used by the Editor to create an empty attributeBase.
@@ -57,8 +56,7 @@ public abstract class AttributeBase //: ISerializationCallbackReceiver
     /// </summary>
     protected AttributeBase()
     {
-        Name = "NewAttribute";
-        //m_ModifyExpression = "";
+        FieldName = "NewAttribute";
     }
 
     /// <summary>
@@ -69,26 +67,11 @@ public abstract class AttributeBase //: ISerializationCallbackReceiver
     /// <param name="modifyExpression">The modify expression.</param>
     protected AttributeBase(string name)
     {
-        Name = name;
-        //m_ModifyExpression = modifyExpression;
+        FieldName = name;
     }
 
-    public bool IsObject()
+    public bool IsUnityObject()
     {
         return Type.IsSubclassOf(typeof(UnityEngine.Object));
     }
-
-    //public virtual void Serialize() { }
-
-    //public virtual object Deserialize() { return null; }
-
-    //public void OnBeforeSerialize()
-    //{
-    //    Serialize();
-    //}
-
-    //public void OnAfterDeserialize()
-    //{
-    //    Deserialize();
-    //}
 }
