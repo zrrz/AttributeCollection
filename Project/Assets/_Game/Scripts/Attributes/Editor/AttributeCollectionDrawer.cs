@@ -21,10 +21,11 @@ public class AttributeCollectionDrawer : PropertyDrawer
     {
         if (!initialized)
         {
+            Debug.Log("Initializing");
             Initialize(property.serializedObject);
             initialized = true;
         }
-        attributeList.DoLayoutList();
+        attributeList.DoList(position);
     }
 
     private void Initialize(SerializedObject serializedObject)
@@ -43,11 +44,6 @@ public class AttributeCollectionDrawer : PropertyDrawer
         attributeList.onRemoveCallback += RemoveAttribute;
         attributeList.drawElementCallback += DrawAttribute;
         attributeList.elementHeight *= 2f;
-    }
-
-    public void DoLayoutList()
-    {
-        attributeList.DoLayoutList();
     }
 
     private void DrawAttribute(Rect rect, int index, bool isActive, bool isFocused)
