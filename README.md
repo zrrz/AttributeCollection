@@ -18,3 +18,10 @@ if (attributes.TryGetAttribute("MyAttributeName", out AttributeBase attribute))
     var myAttribute = (Attribute<int>)attribute;
 }
 ```
+
+TODO
+- Clean up API so you can just do `GetAttribute<int>("MyAttributeName")`
+- Clean up Attribute Collection Property drawer. It's ugly and half working on some types
+- Harden reordering elements in list
+- Fix API to send AttributeRequirements which is the real intent of this system: ItemAction holds a list of AttributeRequirements.
+ When ItemAction is added to ItemData, ItemDatas AttributeCollection is automatically updated to reflect the AttributeRequirements
