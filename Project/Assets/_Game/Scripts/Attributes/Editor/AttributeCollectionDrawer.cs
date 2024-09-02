@@ -9,48 +9,73 @@ using UnityEngine.Assertions;
 [CustomPropertyDrawer(typeof(AttributeCollection))]
 public class AttributeCollectionDrawer : PropertyDrawer
 {
-    private static string[] typeNames;
-
     private SerializedObject serializedObject;
     private AttributeCollection attributeCollection;
-    private ReorderableList attributeList;
+    //private ReorderableList attributeList;
 
     private bool initialized = false;
+
+    private float elementHeight = 21f;
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         if (!initialized)
         {
             Debug.Log("Initializing");
-            Initialize(property.serializedObject);
+            AttributeCollection collection = this.fieldInfo.GetValue(property.serializedObject.targetObject) as AttributeCollection;
+            Initialize(collection);
             initialized = true;
+            this.serializedObject = property.serializedObject;
         }
-        attributeList.DoList(position);
+        //attributeList.DoList(position);
+
+        foreach(var attribute in attributeCollection)
+        {
+            DrawAttribute(position, attribute);
+        }
     }
 
-    private void Initialize(SerializedObject serializedObject)
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        var itemData = (serializedObject.targetObject as ItemData);
-        Assert.IsNotNull(itemData);
+        if(!initialized)
+        {
+            return 0f;
+        }
+        float listElementTopPadding = 1f;
+        float kListElementBottomPadding = 4f;
+        float listElementPadding = kListElementBottomPadding + listElementTopPadding;
+        return listElementPadding + attributeCollection.Count * elementHeight;
+        //height = GetElementYOffset(attributeCollection.Count - 1) + GetElementHeight(attributeCollection.Count - 1) + listElementPadding;
+        //return elementHeight;
+        //return base.GetPropertyHeight(property, label);
+    }
 
-        attributeCollection = itemData.Attributes;
+    private void Initialize(AttributeCollection collection)
+    {
+        Assert.IsNotNull(collection);
+
+        attributeCollection = collection;
         attributeCollection.Deserialize();
 
-        this.serializedObject = serializedObject;
-
-        attributeList = new ReorderableList(attributeCollection.Attributes, typeof(AttributeBase), true, true, true, true);
-        attributeList.drawHeaderCallback += rect => EditorGUI.LabelField(rect, "Attributes", EditorStyles.boldLabel);
-        attributeList.onAddCallback += AddNewAttribute;
-        attributeList.onRemoveCallback += RemoveAttribute;
-        attributeList.drawElementCallback += DrawAttribute;
-        attributeList.elementHeight *= 2f;
+        //attributeList = new ReorderableList(attributeCollection.Attributes, typeof(AttributeBase), true, true, true, true);
+        //attributeList.drawHeaderCallback += rect => EditorGUI.LabelField(rect, "Attributes", EditorStyles.boldLabel);
+        //attributeList.onAddCallback = AddNewAttribute;
+        //attributeList.onRemoveCallback += RemoveAttribute;
+        //attributeList.drawElementCallback += DrawAttribute;
+        //attributeList.elementHeight *= 2f;
     }
 
-    private void DrawAttribute(Rect rect, int index, bool isActive, bool isFocused)
+    private void DrawAttribute(Rect position, AttributeBase attribute)
     {
-        var attributeBase = attributeCollection[index];
-
-        Rect nameRect = new Rect(rect);
+        GUIStyle elementBackground = "RL Element";
+        if (Event.current.type == EventType.Repaint)
+        {
+            elementBackground.Draw(position, false, false, false, false);
+            GUIStyle boxBackground = "RL Background";
+            boxBackground.Draw(position, false, false, false, false);
+        }
+        //GUI.Box(position, "");
+        Rect nameRect = new Rect(position);
         nameRect.width /= 4f;
         nameRect.height /= 2f;
 
@@ -58,12 +83,62 @@ public class AttributeCollectionDrawer : PropertyDrawer
         valueRect.x += valueRect.width;
         valueRect.width /= 2f;
 
-        Rect typeRect = new Rect(rect);
+        Rect typeRect = new Rect(position);
         typeRect.height /= 2f;
         typeRect.y += typeRect.height;
 
+        EditorGUI.LabelField(nameRect, attribute.FieldName);
+        EditorGUI.LabelField(typeRect, attribute.TypeName);
+
+        DrawAttributeField(valueRect, attribute);
+    }
+
+    //private void DrawAttribute(Rect rect, int index, bool isActive, bool isFocused)
+    //{
+    //    var attributeBase = attributeCollection[index];
+
+    //    Rect nameRect = new Rect(rect);
+    //    nameRect.width /= 4f;
+    //    nameRect.height /= 2f;
+
+    //    Rect valueRect = new Rect(nameRect);
+    //    valueRect.x += valueRect.width;
+    //    valueRect.width /= 2f;
+
+    //    Rect typeRect = new Rect(rect);
+    //    typeRect.height /= 2f;
+    //    typeRect.y += typeRect.height;
+
+    //    attributeBase.FieldName = EditorGUI.TextField(nameRect, attributeBase.FieldName);
+
+    //    DrawAttributeField(valueRect, attributeBase);
+
+    //    EditorGUI.BeginChangeCheck();
+
+    //    int newTypeIndex = TypeLoaderEditorUtility.DrawTypePopup(typeRect, attributeBase.TypeName);
+
+    //    if (EditorGUI.EndChangeCheck())
+    //    {
+    //        System.Type attributeType = TypeLoader.AllTypes[newTypeIndex];
+
+    //        //var templateType = typeof(Attribute<>);
+    //        //System.Type[] typeArgs = { attributeType };
+    //        //System.Type typedAttributeType = templateType.MakeGenericType(attributeType);
+
+    //        var attribute = AttributeBase.CreateInstance(attributeType, attributeBase.FieldName/*, TypeLoader.AllTypesNames[newTypeIndex]*/);
+
+    //        attributeCollection[index] = attribute;
+
+    //        serializedObject.Update();
+    //        EditorUtility.SetDirty(serializedObject.targetObject);
+    //    }
+
+    //    serializedObject.ApplyModifiedProperties();
+    //}
+
+    private void DrawAttributeField(Rect valueRect, AttributeBase attributeBase)
+    {
         EditorGUI.BeginChangeCheck();
-        attributeBase.FieldName = EditorGUI.TextField(nameRect, attributeBase.FieldName);
 
         //Case for UnityEngine.Objects
         Object prevValue = null;
@@ -116,7 +191,7 @@ public class AttributeCollectionDrawer : PropertyDrawer
                     break;
                 case Attribute<System.Enum>:
                     var enumAttribute = ((Attribute<System.Enum>)attributeBase);
-                    enumAttribute.Value = EditorGUI.EnumPopup(typeRect, enumAttribute.Value);
+                    enumAttribute.Value = EditorGUI.EnumPopup(valueRect, enumAttribute.Value);
                     break;
                 case Attribute<Vector2>:
                     var vec2Attribute = ((Attribute<Vector2>)attributeBase);
@@ -157,69 +232,23 @@ public class AttributeCollectionDrawer : PropertyDrawer
                 EditorUtility.SetDirty(serializedObject.targetObject);
             }
         }
-
-        EditorGUI.BeginChangeCheck();
-
-        if (typeNames == null)
-        {
-            typeNames = TypeLoader.AllTypesNames;
-        }
-        string[] names = typeNames;
-        int newTypeIndex = 0;
-        int currentIndex = System.Array.IndexOf(typeNames, attributeBase.TypeName);
-        if (currentIndex == -1)
-        {
-            string currentTypeName = attributeBase.TypeName;
-            if (string.IsNullOrEmpty(currentTypeName))
-            {
-                currentTypeName = "<Empty>";
-            }
-            List<string> namesList = new List<string>(names);
-            namesList.Insert(0, $"<Missing: {currentTypeName}>");
-            newTypeIndex = EditorGUI.Popup(typeRect, 0, namesList.ToArray());
-            if (newTypeIndex != 0)
-            {
-                newTypeIndex--;
-            }
-        }
-        else
-        {
-            newTypeIndex = EditorGUI.Popup(typeRect, currentIndex, names);
-        }
-
-        if (EditorGUI.EndChangeCheck())
-        {
-            System.Type attributeType = TypeLoader.AllTypes[newTypeIndex];
-
-            var templateType = typeof(Attribute<>);
-            System.Type[] typeArgs = { attributeType };
-            System.Type typedAttributeType = templateType.MakeGenericType(typeArgs);
-
-            var attribute = AttributeBase.CreateInstance(typedAttributeType, attributeBase.FieldName, attributeType, TypeLoader.AllTypesNames[newTypeIndex]);
-
-            attributeCollection[index] = attribute;
-
-            serializedObject.Update();
-            EditorUtility.SetDirty(serializedObject.targetObject);
-        }
-
-        serializedObject.ApplyModifiedProperties();
     }
 
-    private void AddNewAttribute(ReorderableList list)
-    {
-        var newAttribute = AttributeBase.CreateInstance(typeof(Attribute<int>), "MyInt", typeof(int), typeof(int).Name);
-        attributeCollection.Add(newAttribute);
-        serializedObject.Update();
-        EditorUtility.SetDirty(serializedObject.targetObject);
-        serializedObject.ApplyModifiedProperties();
-    }
+    //private void AddNewAttribute(ReorderableList list)
+    //{
+    //    Debug.Log("AddNewAttribute");
+    //    var newAttribute = AttributeBase.CreateInstance(typeof(int), "MyInt");
+    //    attributeCollection.Add(newAttribute);
+    //    serializedObject.Update();
+    //    EditorUtility.SetDirty(serializedObject.targetObject);
+    //    serializedObject.ApplyModifiedProperties();
+    //}
 
-    private void RemoveAttribute(ReorderableList list)
-    {
-        attributeCollection.RemoveAt(list.index);
-        serializedObject.Update();
-        EditorUtility.SetDirty(serializedObject.targetObject);
-        serializedObject.ApplyModifiedProperties();
-    }
+    //private void RemoveAttribute(ReorderableList list)
+    //{
+    //    attributeCollection.RemoveAt(list.index);
+    //    serializedObject.Update();
+    //    EditorUtility.SetDirty(serializedObject.targetObject);
+    //    serializedObject.ApplyModifiedProperties();
+    //}
 }

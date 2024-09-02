@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
-using System;
 
 [CreateAssetMenu(fileName = "ItemData", menuName = "ItemData")]
 public class ItemData : ScriptableObject
 {
+    [SerializeField] private ItemAction[] itemActions;
     [SerializeField] private AttributeCollection attributes;
 
     public AttributeCollection Attributes {
@@ -19,5 +19,12 @@ public class ItemData : ScriptableObject
             }
             return attributes;
         }
+    }
+
+    private void OnValidate()
+    {
+        //TODO move this to OnItemActionsCount changed event
+        var actionValueFields = ItemActionUtility.GetAllActionValues(itemActions);
+        attributes.UpdateAttributesToMatchList(actionValueFields, true);
     }
 }

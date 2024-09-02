@@ -20,25 +20,30 @@ public abstract class AttributeBase
     /// <returns>The value Type.</returns>
     public abstract System.Type GetValueType();
 
-    public static AttributeBase CreateInstance(System.Type type, string name, System.Type attributeType, string typeName)
+    public static AttributeBase CreateInstance(System.Type attributeType, string attributeName)
     {
+        string typeName = attributeType.Name;
+
         //Use reflection to create the instance.
         //Parameters example: string name, int OverrideValue = 0, VariantType variantType = VariantType.Override, string modifyExpression = "" .
 
-        if (type.IsSubclassOf(typeof(AttributeBase)) == false)
-        {
-            Debug.LogError("Must be a subclass of AttributeBase! Did you maybe use a T instead of an Attribute<T>?");
-            return null;
-        }
+        //if (attributeType.IsSubclassOf(typeof(AttributeBase)) == false)
+        //{
+        //    Debug.LogError("Must be a subclass of AttributeBase! Did you maybe use a T instead of an Attribute<T>?");
+        //    return null;
+        //}
 
         //if (value == null || valueType != value.GetType())
         //{
         //    value = System.Type.Missing;
         //}
 
-        var newAttribute = System.Activator.CreateInstance(type,
+        System.Type genericClass = typeof(Attribute<>);
+        Type attributeClass = genericClass.MakeGenericType(attributeType);
+
+        var newAttribute = System.Activator.CreateInstance(attributeClass,
             BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding, null,
-            new object[] { name/*, value, modifyExpression */},
+            new object[] { attributeName/*, value, modifyExpression */},
             CultureInfo.CurrentCulture) as AttributeBase;
 
         newAttribute.Type = attributeType;

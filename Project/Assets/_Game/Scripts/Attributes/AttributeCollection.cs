@@ -2,6 +2,7 @@ using OdinSerializer;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 [System.Serializable]
 public class AttributeCollection
@@ -183,7 +184,7 @@ public class AttributeCollection
         return attributes;
     }
 
-    public bool UpdateAttributesToMatchList(IReadOnlyList<AttributeBase> requiredAttributes, bool removeAdditionalAttributes)
+    public bool UpdateAttributesToMatchList(List<ItemActionValueField> requiredAttributes, bool removeAdditionalAttributes)
     {
         if (removeAdditionalAttributes)
         {
@@ -192,48 +193,47 @@ public class AttributeCollection
         return CreateNewAttributesIfMissing(requiredAttributes);
     }
 
-    public bool RemoveAdditionalAttributes(IReadOnlyList<AttributeBase> requiredAttributes)
+    public bool RemoveAdditionalAttributes(List<ItemActionValueField> requiredAttributes)
     {
-        //if (m_Attributes == null)
-        //{
-        //    Debug.LogWarning($"The AttributeCollection '{this}' was not initialized yet you are trying to use it.");
-        //}
-        //for (int i = 0; i < m_Attributes.Count; i++)
-        //{
-        //    var attribute = m_Attributes[i];
-        //    var match = false;
-        //    for (int j = 0; j < requiredAttributes.Count; j++)
-        //    {
-        //        var requiredAttribute = requiredAttributes[j];
+        Assert.IsNotNull(attributes);
 
-        //        if ((attribute.Name == requiredAttribute.Name) && attribute.GetType() == requiredAttribute.GetType())
-        //        {
-        //            if (!match)
-        //            {
-        //                match = true;
-        //            }
-        //            else
-        //            {
-        //                Debug.LogWarning("The attributes matched twice, some attribute had been duplicated.");
-        //            }
-        //        }
-        //        else if (attribute.ConnectionID == requiredAttribute.ConnectionID && attribute.GetType() == requiredAttribute.GetType())
-        //        {
-        //            attribute.Rename(requiredAttribute.Name);
-        //            if (match == true)
-        //            {
-        //                Debug.LogWarning("The attributes matched twice, some attribute had been duplicated.");
-        //            }
-        //            match = true;
-        //        }
-        //    }
+        for (int i = 0; i < this.Count; i++)
+        {
+            var attribute = attributes[i];
+            var match = false;
+            for (int j = 0; j < requiredAttributes.Count; j++)
+            {
+                var requiredAttribute = requiredAttributes[j];
 
-        //    if (match == false)
-        //    {
-        //        RemoveAttribute(attribute);
-        //        i--;
-        //    }
-        //}
+                if ((attribute.FieldName == requiredAttribute.FieldName) && attribute.Type == requiredAttribute.Type)
+                {
+                    if (!match)
+                    {
+                        match = true;
+                    }
+                    else
+                    {
+                        Debug.LogWarning("The attributes matched twice, some attribute had been duplicated.");
+                    }
+                }
+                //else if (attribute.ConnectionID == requiredAttribute.ConnectionID && attribute.GetType() == requiredAttribute.GetType())
+                //{
+                //    attribute.Rename(requiredAttribute.Name);
+                //    if (match == true)
+                //    {
+                //        Debug.LogWarning("The attributes matched twice, some attribute had been duplicated.");
+                //    }
+                //    match = true;
+                //}
+            }
+
+            if (match == false)
+            {
+                //RemoveAttribute(attribute);
+                RemoveAt(i);
+                i--;
+            }
+        }
 
         return true;
     }
@@ -243,46 +243,48 @@ public class AttributeCollection
     /// </summary>
     /// <param name="requiredAttributes">The attributes that are required to exist in the collection.</param>
     /// <returns>Returns false if something fails while adding the new attributes.</returns>
-    public bool CreateNewAttributesIfMissing(IReadOnlyList<AttributeBase> requiredAttributes)
+    public bool CreateNewAttributesIfMissing(List<ItemActionValueField> requiredAttributes)
     {
-        //for (int i = 0; i < requiredAttributes.Count; i++)
-        //{
-        //    var requiredAttribute = requiredAttributes[i];
-        //    if (TryGetAttribute(requiredAttribute.Name, out var variant))
-        //    {
-        //        if (variant.GetType() != requiredAttribute.GetType())
-        //        {
-        //            Debug.LogError("Unable to create new Attribute. There are two different Attributes with the same name.");
-        //            return false;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        bool foundConnectionMatch = false;
-        //        for (int j = 0; j < attributes.Count; j++)
-        //        {
-        //            var existingAttribute = attributes[j];
-        //            if (requiredAttribute.ConnectionID == existingAttribute.ConnectionID
-        //                && existingAttribute.GetType() == requiredAttribute.GetType())
-        //            {
-        //                existingAttribute.Rename(requiredAttribute.Name);
-        //                foundConnectionMatch = true;
-        //            }
-        //        }
+        for (int i = 0; i < requiredAttributes.Count; i++)
+        {
+            var requiredAttribute = requiredAttributes[i];
+            if (TryGetAttribute(requiredAttribute.FieldName, out var variant))
+            {
+                if (variant.GetType() != requiredAttribute.GetType())
+                {
+                    Debug.LogError("Unable to create new Attribute. There are two different Attributes with the same name.");
+                    return false;
+                }
+                continue;
+            }
+            else
+            {
+                //bool foundConnectionMatch = false;
+                //for (int j = 0; j < attributes.Count; j++)
+                //{
+                //    var existingAttribute = attributes[j];
+                //    if (requiredAttribute.ConnectionID == existingAttribute.ConnectionID
+                //        && existingAttribute.GetType() == requiredAttribute.GetType())
+                //    {
+                //        existingAttribute.Rename(requiredAttribute.Name);
+                //        foundConnectionMatch = true;
+                //    }
+                //}
 
-        //        if (foundConnectionMatch) { continue; }
-        //        var attribute = AttributeBase.CreateInstance(requiredAttribute.GetType(), requiredAttribute.Name,
-        //            Type.Missing, VariantType.Inherit);
+                //if (foundConnectionMatch) { continue; }
 
-        //        //Items that are note Default Items should not preevaluate attributes by default. Everything else should
-        //        if (AttachedItem == null || AttachedItem == AttachedItem.ItemDefinition.DefaultItem)
-        //        {
-        //            attribute?.ReevaluateValue(true);
-        //        }
+                var attribute = AttributeBase.CreateInstance(requiredAttribute.Type, requiredAttribute.FieldName);
 
-        //        AddAttribute(attribute);
-        //    }
-        //}
+                ////Items that are note Default Items should not preevaluate attributes by default. Everything else should
+                //if (AttachedItem == null || AttachedItem == AttachedItem.ItemDefinition.DefaultItem)
+                //{
+                //    attribute?.ReevaluateValue(true);
+                //}
+
+                //AddAttribute(attribute);
+                Add(attribute);
+            }
+        }
 
         //ReevaluateAll(false);
 
